@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/haylove/small_bank/util"
 	"github.com/stretchr/testify/require"
-	"small_bank/util"
 )
 
 func createRandomAccount(t *testing.T) Account {

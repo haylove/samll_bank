@@ -6,10 +6,11 @@ package db
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
-	"small_bank/util"
 	"testing"
 	"time"
+
+	"github.com/haylove/small_bank/util"
+	"github.com/stretchr/testify/require"
 )
 
 func createRandomEntry(t *testing.T, account Account) Entry {
