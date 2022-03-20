@@ -51,7 +51,7 @@ func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency str
 	account, err := s.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-
+			ctx.JSON(http.StatusNotFound, errResponse(err))
 			return db.Account{}, false
 		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
@@ -60,7 +60,7 @@ func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency str
 	if currency != "" {
 		if account.Currency != currency {
 			err = fmt.Errorf("account [%d] mismatch: %v vs %v", account.ID, account.Currency, currency)
-			ctx.JSON(http.StatusNotFound, errResponse(err))
+			ctx.JSON(http.StatusBadRequest, errResponse(err))
 			return db.Account{}, false
 		}
 	}
