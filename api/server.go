@@ -22,11 +22,13 @@ func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
 
-	if v, ok := binding.Validator.Engine().(validator.Validate); ok {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("currency", validCurrency)
 	}
 
 	//todo add routers in router
+	router.POST("/users", server.createUser)
+
 	router.POST("/accounts", server.createAccount)
 	router.GET("/accounts", server.listAccounts)
 	router.GET("/accounts/:id", server.getAccount)

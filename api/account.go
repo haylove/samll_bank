@@ -5,6 +5,7 @@
 package api
 
 import (
+	"github.com/lib/pq"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,13 @@ func (s *Server) createAccount(ctx *gin.Context) {
 	}
 	account, err := s.store.CreateAccount(ctx, arg)
 	if err != nil {
+		if pqerr, ok := err.(*pq.Error); ok {
+			switch pqerr.Code.Name() {
+			case "unique_violation", "foreign_key_violation":
+				ctx.JSON(http.StatusForbidden, errResponse(err))
+				return
+			}
+		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
