@@ -4,14 +4,20 @@ postgres:
 createdb:
 	docker exec -it postgres14 createdb --username=root --owner=root small_bank
 
-migrateup:
-	migrate -path db/migration/ -database "postgresql://root:secret@localhost:5432/small_bank?sslmode=disable" -verbose up
-
 dropdb:
 	docker exec -it postgres14 dropdb small_bank
 
-migratedown:
+migrateupa:
+	migrate -path db/migration/ -database "postgresql://root:secret@localhost:5432/small_bank?sslmode=disable" -verbose up
+
+migrateup1:
+	migrate -path db/migration/ -database "postgresql://root:secret@localhost:5432/small_bank?sslmode=disable" -verbose up 1
+
+migratedowna:
 	migrate -path db/migration/ -database "postgresql://root:secret@localhost:5432/small_bank?sslmode=disable" -verbose down
+
+migratedown1:
+	migrate -path db/migration/ -database "postgresql://root:secret@localhost:5432/small_bank?sslmode=disable" -verbose down 1
 
 sqlc:
 	sqlc generate
