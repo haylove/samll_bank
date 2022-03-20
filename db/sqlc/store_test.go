@@ -52,10 +52,5 @@ func TestStore_TransferTx(t *testing.T) {
 
 		toAccount := result.ToAccount
 		require.Equal(t, toAccount.ID, account2.ID)
-
-		diff1 := account1.Balance - fromAccount.Balance
-		diff2 := toAccount.Balance - account2.Balance
-		require.Equal(t, diff1, diff2)
 	}
-
 }
