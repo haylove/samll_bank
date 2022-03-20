@@ -10,21 +10,21 @@ import (
 	"os"
 	"testing"
 
+	"github.com/haylove/small_bank/util"
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbDrive  = "postgres"
-	dbSource = "postgresql://root:secret@localhost/small_bank?sslmode=disable"
+var (
+	testQueries *Queries
+	testDB      *sql.DB
 )
 
-var testQueries *Queries
-
-var testDB *sql.DB
-
 func TestMain(m *testing.M) {
-	var err error
-	testDB, err = sql.Open(dbDrive, dbSource)
+	config, err := util.LoadConfig("../..")
+	if err != nil {
+		log.Fatal("cannot load config,", err)
+	}
+	testDB, err = sql.Open(config.DBDrive, config.DBSource)
 	if err != nil {
 		log.Fatal("connect db err")
 	}

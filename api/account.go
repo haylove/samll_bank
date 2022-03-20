@@ -5,7 +5,6 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -47,15 +46,11 @@ func (s *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
-	account, err := s.store.GetAccount(ctx, req.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+	account, ok := s.validateAccount(ctx, req.ID, "")
+	if !ok {
 		return
 	}
+
 	ctx.JSON(http.StatusOK, account)
 }
 
