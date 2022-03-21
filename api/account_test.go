@@ -81,7 +81,7 @@ func TestServer_getAccount(t *testing.T) {
 			store := mockdb.NewMockStore(ctrl)
 			tc.buildStub(store)
 			//start httptest server and send request
-			server := NewServer(store)
+			server, _ := createRandomServer(t, store)
 			recorder := httptest.NewRecorder()
 			url := fmt.Sprintf("/accounts/%d", tc.accountID)
 			request := httptest.NewRequest(http.MethodGet, url, nil)

@@ -20,13 +20,14 @@ type transferRequest struct {
 	Currency      string  `json:"currency" binding:"required,currency"`
 }
 
+//createTransfer is the api for POST:/transfer
 func (s *Server) createTransfer(ctx *gin.Context) {
 	var req transferRequest
-	if err := ctx.ShouldBind(&req); err != nil {
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
-
+	//validate account and currency
 	if _, ok := s.validateAccount(ctx, req.FromAccountID, req.Currency); !ok {
 		return
 	}
@@ -47,6 +48,9 @@ func (s *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
+// validateAccount validates the accountID  currency ,returns the account and the currency is for the account.
+// If the currency is "",it will return the account with accountID if existed.
+// If false ,that means  the currency is not for the account.
 func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
 	account, err := s.store.GetAccount(ctx, accountID)
 	if err != nil {

@@ -5,6 +5,7 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	db "github.com/haylove/small_bank/db/sqlc"
 	"github.com/haylove/small_bank/util"
@@ -14,15 +15,17 @@ import (
 	"unsafe"
 )
 
+// userResponse prevent  password from being returned,it just copied form db.User
 type userResponse struct {
-	Username          string    `json:"username"`
-	Password          string    `json:"-"`
+	Username          string `json:"username"`
+	_                 string
 	FullName          string    `json:"full_name"`
 	Email             string    `json:"email"`
 	PasswordChangedAt time.Time `json:"password_changed_at"`
 	CreatedAt         time.Time `json:"created_at"`
 }
 
+// createUserRequest is the createUser form
 type createUserRequest struct {
 	Username string `json:"Username" binding:"required,alphanum"`
 	Password string `json:"password" binding:"required,min=6"`
@@ -30,6 +33,7 @@ type createUserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 }
 
+// createUser is the api for POST: '/users'
 func (s *Server) createUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -63,4 +67,52 @@ func (s *Server) createUser(ctx *gin.Context) {
 	//just speculation
 	userRes := *(*userResponse)(unsafe.Pointer(&user))
 	ctx.JSON(http.StatusOK, userRes)
+}
+
+// loginUserRequest is the login form
+type loginUserRequest struct {
+	Username string `json:"Username" binding:"required,alphanum"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// loginResponse contains user information and token
+type loginResponse struct {
+	AccessToken string        `json:"access_token"`
+	User        *userResponse `json:"user"`
+}
+
+// loginUser is the api for POST: '/users/login'
+func (s *Server) loginUser(ctx *gin.Context) {
+	var req loginUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errResponse(err))
+		return
+	}
+	//get user by username
+	user, err := s.store.GetUser(ctx, req.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+	//check password
+	err = util.CheckPassword(req.Password, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errResponse(err))
+		return
+	}
+	//had passed,generate a token for user
+	token, err := s.tokenGenerator.GenerateToken(user.Username, s.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errResponse(err))
+		return
+	}
+	res := loginResponse{
+		AccessToken: token,
+		User:        (*userResponse)(unsafe.Pointer(&user)),
+	}
+	ctx.JSON(http.StatusOK, res)
 }

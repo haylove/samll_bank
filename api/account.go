@@ -5,6 +5,8 @@
 package api
 
 import (
+	"errors"
+	"github.com/haylove/small_bank/token"
 	"github.com/lib/pq"
 	"net/http"
 
@@ -12,19 +14,24 @@ import (
 	db "github.com/haylove/small_bank/db/sqlc"
 )
 
+// createAccountRequest is the form to createAccount
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
+// createAccount is the api for POST:'/accounts'
 func (s *Server) createAccount(ctx *gin.Context) {
 	var req createAccountRequest
-	if err := ctx.ShouldBind(&req); err != nil {
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
+
+	// it has been authenticated,so we get payload from context for create account
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    payload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -43,37 +50,50 @@ func (s *Server) createAccount(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, account)
 }
 
+// getAccountRequest is the form to getAccount,it just needs ID
 type getAccountRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
+// getAccount is the api for GET:"/account:id"
 func (s *Server) getAccount(ctx *gin.Context) {
 	var req getAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
-
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	account, ok := s.validateAccount(ctx, req.ID, "")
 	if !ok {
+		return
+	}
+
+	if account.Owner != payload.Username {
+		err := errors.New("account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusForbidden, errResponse(err))
 		return
 	}
 
 	ctx.JSON(http.StatusOK, account)
 }
 
+// listAccountsRequest is the form for listAccounts,it needs to be paginated data
 type listAccountsRequest struct {
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
+// listAccounts is the api for GET:"/accounts"
 func (s *Server) listAccounts(ctx *gin.Context) {
 	var req listAccountsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
 	arg := db.ListAccountsParams{
+		Owner:  payload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
