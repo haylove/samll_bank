@@ -5,7 +5,6 @@
 package api
 
 import (
-	"errors"
 	"github.com/haylove/small_bank/token"
 	"github.com/lib/pq"
 	"net/http"
@@ -62,15 +61,9 @@ func (s *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
-	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	account, ok := s.validateAccount(ctx, req.ID, "")
-	if !ok {
-		return
-	}
 
-	if account.Owner != payload.Username {
-		err := errors.New("account doesn't belong to the authenticated user")
-		ctx.JSON(http.StatusForbidden, errResponse(err))
+	account, ok := s.validateAccount(ctx, req.ID, "", true)
+	if !ok {
 		return
 	}
 

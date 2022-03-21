@@ -6,7 +6,9 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"github.com/haylove/small_bank/token"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,10 +30,10 @@ func (s *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 	//validate account and currency
-	if _, ok := s.validateAccount(ctx, req.FromAccountID, req.Currency); !ok {
+	if _, ok := s.validateAccount(ctx, req.FromAccountID, req.Currency, true); !ok {
 		return
 	}
-	if _, ok := s.validateAccount(ctx, req.ToAccountID, req.Currency); !ok {
+	if _, ok := s.validateAccount(ctx, req.ToAccountID, req.Currency, false); !ok {
 		return
 	}
 
@@ -51,7 +53,7 @@ func (s *Server) createTransfer(ctx *gin.Context) {
 // validateAccount validates the accountID  currency ,returns the account and the currency is for the account.
 // If the currency is "",it will return the account with accountID if existed.
 // If false ,that means  the currency is not for the account.
-func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
+func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency string, needAuth bool) (db.Account, bool) {
 	account, err := s.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -60,6 +62,14 @@ func (s *Server) validateAccount(ctx *gin.Context, accountID int64, currency str
 		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return db.Account{}, false
+	}
+	if needAuth {
+		payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		if account.Owner != payload.Username {
+			err := errors.New("account doesn't belong to the authenticated user")
+			ctx.JSON(http.StatusForbidden, errResponse(err))
+			return db.Account{}, false
+		}
 	}
 	if currency != "" {
 		if account.Currency != currency {
